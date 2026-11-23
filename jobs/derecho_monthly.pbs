@@ -1,0 +1,29 @@
+#!/bin/bash
+#PBS -N SEV_month
+#PBS -A ##PROJECTCODE##
+#PBS -q main
+#PBS -l select=1:ncpus=128:mpiprocs=1:mem=220GB
+#PBS -l walltime=10:00:00
+#PBS -l job_priority=economy
+#PBS -j oe
+#PBS -J 1-12
+
+set -euo pipefail
+cd "$PBS_O_WORKDIR"
+module load conda/latest
+conda activate "/glade/work/${USER}/conda-envs/sev"
+
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1 PYTHONUNBUFFERED=1
+export HDF5_USE_FILE_LOCKING=FALSE
+export TMPDIR="${SCRATCH:-/glade/derecho/scratch/$USER}/sev/tmp/${PBS_JOBID}"
+mkdir -p "$TMPDIR"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+# Submit a single year as 12 independent months: qsub -v YEAR=1900 jobs/derecho_monthly.pbs
+YEAR=${YEAR:-1900}
+MONTH=${PBS_ARRAY_INDEX:?Requires PBS array submission}
+python -m sev.cli \
+    --year "$YEAR" --month "$MONTH" --workers 128 \
+    --tile-size 32 --time-block 8 --native-cape \
+    --output-dir "${SCRATCH:-/glade/derecho/scratch/$USER}/sev/output"

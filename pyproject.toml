@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sev-historical"
+version = "0.1.0"
+description = "3-hourly historical severe-weather environment diagnostics from NOAA 20CRv3"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.26",
+  "xarray>=2024.1",
+  "netCDF4>=1.6",
+  "metpy>=1.6,<2",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "scipy>=1.11"]
+
+[tool.setuptools.packages.find]
+include = ["sev*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

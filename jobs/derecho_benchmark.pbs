@@ -1,0 +1,37 @@
+#!/bin/bash
+#PBS -N SEV_bench
+#PBS -A ##PROJECTCODE##
+#PBS -q develop
+#PBS -l select=1:ncpus=32:mem=110GB
+#PBS -l walltime=01:00:00
+#PBS -j oe
+
+set -euo pipefail
+cd "$PBS_O_WORKDIR"
+module load conda/latest
+conda activate "/glade/work/${USER}/conda-envs/sev"
+
+# Avoid multiplying BLAS/OpenMP threads inside each Python process.
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export HDF5_USE_FILE_LOCKING=FALSE
+export PYTHONUNBUFFERED=1
+export TMPDIR="${SCRATCH:-/glade/derecho/scratch/$USER}/sev/tmp/${PBS_JOBID}"
+mkdir -p "$TMPDIR"
+trap 'rm -rf "$TMPDIR"' EXIT
+
+# Override as needed: qsub -v YEAR=1900,MONTH=5,MAX_TIMES=8,MAX_POINTS=512 ...
+YEAR=${YEAR:-1900}
+MONTH=${MONTH:-5}
+MAX_TIMES=${MAX_TIMES:-8}
+MAX_POINTS=${MAX_POINTS:-1024}
+WORKERS=${WORKERS:-32}
+
+python -m sev.cli \
+    --year "$YEAR" --month "$MONTH" --workers "$WORKERS" \
+    --tile-size 64 --time-block 8 \
+    --max-times "$MAX_TIMES" --max-points "$MAX_POINTS" \
+    --native-cape \
+    --output-dir "${SCRATCH:-/glade/derecho/scratch/$USER}/sev/output"
